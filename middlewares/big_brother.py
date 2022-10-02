@@ -6,7 +6,7 @@ from aiogram.dispatcher.handler import CancelHandler
 from aiogram.dispatcher.middlewares import BaseMiddleware
 
 from data.config import banned_users
-from utils.db_api.quick_commands import add_message
+# from utils.db_api.quick_commands import add_message
 from utils.misc.in_inline import in_inline
 
 RE_EMOJI = re.compile(
@@ -54,11 +54,11 @@ class BigBrother(BaseMiddleware):
         logging.debug(f"3. Pre Process Message, {data=}")
         logging.debug("Следующая точка: Filters, Process Message")
         data["middleware_data"] = "Это пройдёт в on_process_message"
-        if message.text is not None and message.text != '' and not message.text.startswith('/') \
-                and not in_inline(message.text) and not RE_EMOJI.match(message.text):
-            await add_message(id=message.message_id, chat_id=message.chat.id,
-                              name=message.from_user.full_name, message=message.text,
-                              person_id=message.from_user.id)
+        # if message.text is not None and message.text != '' and not message.text.startswith('/') \
+        #         and not in_inline(message.text) and not RE_EMOJI.match(message.text):
+            # await add_message(id=message.message_id, chat_id=message.chat.id,
+            #                   name=message.from_user.full_name, message=message.text,
+            #                   person_id=message.from_user.id)
 
     # 4 Filters
 
