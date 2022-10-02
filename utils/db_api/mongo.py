@@ -1,81 +1,64 @@
 import logging
-from typing import Union
 
 import pymongo
+from accessify import private
+from bson.objectid import ObjectId
+from pymongo.collection import Collection
 
 from data.config import MONGO_CONNECTION_STRING
 
+TELETOKEN_COLLECTION = 'teletokens'
+
 
 class Database:
+    __instance = None
 
-    def __init__(self, pool):
-        self.pool = pool
+    @private
+    def __init__(self, db):
+        if not Database.__instance:
+            print("init")
+            self.db = db
 
     @classmethod
-    async def create(cls):
-        logging.info("Connection to mongo")
-        client = pymongo.MongoClient(MONGO_CONNECTION_STRING)
-        logging.info("Connected to mongo " + str(client))
-        logging.info("Connected to allconnect db " + str(client['allconnect']))
-        return cls(client['allconnect'])
+    def get_instance(cls):
+        if not cls.__instance:
+            logging.info("Connection to mongo")
+            client = pymongo.MongoClient(MONGO_CONNECTION_STRING)
+            logging.info("Connected to mongo " + str(client))
+            logging.info("Connected to allconnect db " + str(client['allconnect']))
+            cls.__instance = Database(client['allconnect'])
+        return cls.__instance
 
-    # async def execute(self, command, *args,
-    #                   fetch: bool = False,
-    #                   fetchval: bool = False,
-    #                   fetchrow: bool = False,
-    #                   execute: bool = False):
-    #     async with self.pool.acquire() as connection:
-    #         connection: Connection
-    #         async with connection.transaction():
-    #             if fetch:
-    #                 result = await connection.fetch(command, *args)
-    #             elif fetchval:
-    #                 result = await connection.fetchval(command, *args)
-    #             elif fetchrow:
-    #                 result = await connection.fetchrow(command, *args)
-    #             elif execute:
-    #                 result = await connection.execute(command, *args)
-    #         return result
-    #
-    # async def create_table_users(self):
-    #     sql: str = ("CREATE TABLE IF NOT EXISTS users ("
-    #                 "id SERIAL PRIMARY KEY,"
-    #                 "full_name VARCHAR(255) NOT NULL,"
-    #                 "username VARCHAR(255) NULL,"
-    #                 "telegram_id BIGINT NOT NULL UNIQUE);")
-    #     await self.execute(sql, execute=True)
+    def get_token_collection(self) -> Collection:
+        return self.db[TELETOKEN_COLLECTION]
 
-    # @staticmethod
-    # def format_args(sql, parameters: dict):
-    #     sql += " AND ".join([
-    #         f"{item} = ${num}" for num, item in enumerate(parameters.keys(),
-    #                                                       start=1)
-    #     ])
-    #     return sql, tuple(parameters.values())
+    def check_token(self, token):
+        try:
+            collection = self.get_token_collection().find_one({"_id": ObjectId(token)})
+            return collection is not None
+        except Exception as err:
+            logging.error(err)
 
-    # async def add_user(self, full_name: str, username: str, telegram_id):
-    #     sql = "INSERT INTO users (full_name, username, telegram_id) VALUES($1, $2, $3) returning *"
-    #     return await self.execute(sql, full_name, username, telegram_id, fetchrow=True)
-    #
-    # async def select_all_users(self):
-    #     sql: str = "SELECT * FROM users"
-    #     return await self.execute(sql, fetch=True)
-    #
-    # async def select_user(self, **kwargs):
-    #     sql = "SELECT * FROM users WHERE "
-    #     sql, parameters = self.format_args(sql, parameters=kwargs)
-    #     return await self.execute(sql, *parameters, fetchrow=True)
-    #
-    # async def count_users(self):
-    #     sql = "SELECT COUNT(*) FROM users"
-    #     return await self.execute(sql, fetchval=True)
-    #
-    # async def update_user_username(self, username, telegram_id):
-    #     sql = "UPDATE users SET username=$1 WHERE telegram_id=$2"
-    #     await self.execute(sql, username, telegram_id, execute=True)
-    #
-    # async def delete_users(self):
-    #     await self.execute("DELETE FROM users WHERE TRUE", execute=True)
-    #
-    # async def drop_users(self):
-    #     await self.execute("DROP TABLE users", execute=True)
+    def set_user_id_for_token(self, token, user_id):
+        try:
+            self.get_token_collection().update_one(
+                {"_id": ObjectId(token)},
+                {"$set": {
+                    "telegramUser": user_id
+                }})
+        except Exception as err:
+            logging.error(err)
+
+    def check_user(self, user_id):
+        try:
+            collection = self.get_token_collection().find_one({"telegramUser": str(user_id)})
+            return collection is not None
+        except Exception as err:
+            logging.error(err)
+
+    def get_user(self, user_id):
+        try:
+            collection = self.get_token_collection().find_one({"telegramUser": str(user_id)})
+            return self.db['users'].find_one({"_id": ObjectId(collection["user"])})
+        except Exception as err:
+            logging.error(err)

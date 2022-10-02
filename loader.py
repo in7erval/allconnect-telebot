@@ -20,6 +20,6 @@ dp = Dispatcher(bot, storage=storage)
 # ssl_context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
 
 loop = asyncio.get_event_loop()
-loop.run_until_complete(Database.create())
+# loop.run_until_complete(Database.create())
 
 __all__ = ["bot", "storage", "dp"]
